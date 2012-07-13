@@ -31,3 +31,11 @@ div.abstract {
 .toggle[title="bibtex"]:before {
   content: "BibTex"
 }
+ul.bib{
+	list-style-type: none;
+	margin: 0;
+	padding: 0;
+}
+ul.bib li {
+	padding: 0.3em 0 0.2em;
+}

@@ -15,7 +15,8 @@ var Ajax = require('ajax'),
 		"{{#abstract}}<p class='toggle' style='display:none' id='{{_label}}_abstract' title='abstract'>{{{abstract}}}</p>{{/abstract}}"+
 		"<pre class='toggle' style='display:none' id='{{_label}}_bibtex' title='bibtex'>{{_raw}}</pre>"+
 		"</li>",
-    bibsrc = null;
+    bibsrc = null,
+	container = document.getElementById("bibliography");
 
 Array.prototype.forEach.call(document.getElementsByTagName("script"), function(script){
 	var m = script.src.match(/minsa\.bibtex\.js\?(.*)/);
@@ -44,8 +45,7 @@ function toggle(id) {
 new Ajax.Request(bibsrc, {
 	onSuccess: function(xhr) {
 		var b = new Bibtex(xhr.responseText),
-			Log = require('log'),
-		    container = document.body;
+			Log = require('log');
 		
 		b.parse();
 		b.records.reverse();
@@ -72,6 +72,7 @@ new Ajax.Request(bibsrc, {
 		
 		if (0 == groups["Conference"].length && 0 == groups["Workshop"].length) {
 			var l = document.createElement("ul");
+			    l.className = "bib"
 			    l.innerHTML = Bibtex.format(groups["Miscellaneous"], pattern)
 			container.appendChild(l);
 		}
@@ -81,6 +82,7 @@ new Ajax.Request(bibsrc, {
 					var h = document.createElement("h3");
 					    h.innerHTML = t;
 					var l = document.createElement("ul");
+         			    l.className = "bib"
 					    l.innerHTML = Bibtex.format(groups[t], pattern)
 				
 					container.appendChild(h);
