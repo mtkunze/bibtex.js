@@ -1,11 +1,13 @@
 # Standalone Application #
 
-This small application showcases the bibtex.js library with the use case, for which I originally developed it. To render a bibtex file of my scientific publications on my research homepage, saving time and effort to render them and maintain them manually. I simply upload my bibtex file and the application takes care of the rest. 
+This small application showcases the bibtex.js library with the use case, for which I originally developed it. To render a bibtex file of my scientific publications on my research homepage, saving time and effort to render them and maintain them manually. 
+
+I simply upload my bibtex file and the application takes care of the rest. Records are grouped in various scientific publication types, each is rendered with a custom template and additional links for the reader are created to obtain the bibtex record (for easier citation), the abstract (for easier comprehension), and a link (to obtain the paper).
 
 Here I provide it for broad reuse. All that is required is to add a div and a script tag, where you want to render you bibliography.
 
 	<div id="bibliography"></div>
-	<script src="https://raw.github.com/mtkunze/bibtex.js/master/standalone/minsa.bibtex.js?path/to/your/?publications.bib|Book|Book Chapter|Journal|Conference|Workshop|Miscellaneous"></script>
+	<script src="https://raw.github.com/mtkunze/bibtex.js/master/standalone/sa.bibtex.js?path/to/your/publications.bib|Book|Book Chapter|Journal|Conference|Workshop|Miscellaneous"></script>
 	
 This requires a file on the [same host](http://en.wikipedia.org/wiki/Same_origin_policy) as the page that shall show your bibliography and allows for some configuration.
 
@@ -22,12 +24,17 @@ After the url of the script, follows the configuration of the standalone bibtex 
  * Conference: conference, conf
  * Workshop: workshop, ws
  * Miscellaneous: <anything else>
-For example, the following configuration, will result in printing Conference and  Workshop papers if they are not empty. The Journal section will be shown always, no matter whether it's empty or not. Books, Book Chapters, and Miscellaneous will not be listed.
+	
+3. Some of the bibtex attributes are handled in a special fashion, as follows:
+ * abstract: If you include the abstract, a link will be created that allows to expand the record on the page and read the abstract.
+ * url: Use this to link to a file or website, where the referenced paper can be obtained, e.g., Springerlink, personal homepage, etc.
+
+
+If you want to use it in a reliable fashion, you should consider downloading the standalone file (sa.bibtex.js) and put it on your own host or the host. Some styling is provided in standalone.css which you can include on your page.
+
+For example, the following configuration assumes a copy of the javascript file and a bibtex file named _refs.bib_ in the root directory of your host. It will result in printing Conference and  Workshop papers if they are not empty. The Journal section will be shown always, no matter whether it's empty or not. Books, Book Chapters, and Miscellaneous will not be listed.
 	<div id="bibliography"></div>
-	<script src="https://raw.github.com/mtkunze/bibtex.js/master/standalone/minsa.bibtex.js?path/to/your/?publications.bib|!Journal|Conference|Workshop"></script>
-
-3. If you want to use it in a reliable fashion, you should consider downloading the standalone file (sa.bibtex.js) and put it on your own host or the host.
-
+	<script src="/sa.bibtex.js?refs.bib|!Journal|Conference|Workshop"></script>
 
 ## Compilation ##
 
