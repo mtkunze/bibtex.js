@@ -4,18 +4,47 @@
 		<meta charset="utf-8">
 		<title>Bibtex Parser</title>
 		<style>
+			div.abstract {
+			  margin: 0.3em 0 0.3em 2em;
+			  padding-left: 1em;
+			  width: 50em;
+			  font-size: 90%;
+			  border-left: 2px solid #ccc;
+			  line-height: 140%
+			}
 			.toggle {
-				display: none;
+			  display: none;
+			}
+			.toggle {
+			  margin: 0.5em 0em 0.5em 2em;
+			  padding: 0.5em;
+			  background-color: #eee;
+			  overflow: auto;
+			  font-size: 90%
+			}
+			.toggle[title="abstract"]:before,
+			.toggle[title="bibtex"]:before {
+			  position: relative;
+			  display: block;
+			  padding-bottom: 0.1em;
+			  margin-bottom: 0.5em;
+			  height: 2em;
+			  font-weight: bold;
+			  border-bottom: 1px solid black;
+			  font-size: 100%;
+			  content: "Abstract";
+			}
+			.toggle[title="bibtex"]:before {
+			  content: "BibTex"
 			}
 		</style>
 		
-		<!--script src="min/script.js"></script-->
-		<script src="min/shim.min.js"></script>
-		<script src="min/modules.min.js"></script>
-		<script src="min/log.min.js"></script>
-		<script src="min/ajax.min.js"></script>
-		<script src="min/mustache.min.js"></script>
-		<script src="bibtex.js"></script>
+		<script src="lib/shim.min.js"></script>
+		<script src="lib/modules.min.js"></script>
+		<script src="lib/log.min.js"></script>
+		<script src="lib/ajax.min.js"></script>
+		<script src="lib/mustache.min.js"></script>
+		<script src="src/bibtex.js"></script>
 	</head>
 	<body>
 		

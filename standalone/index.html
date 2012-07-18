@@ -6,11 +6,19 @@
 		<link rel="stylesheet" type="text/css" href="standalone.css" />
 	</head>
 	<body>
-		<!--
-		<script src="standalone.bibtex.js"></script>
-		<script src="custom.js"></script>
-		-->
 		<div id="bibliography"></div>
-		<script src="minsa.bibtex.js?publications.bib"></script>
+		
+		<!-- for testing --
+		<script src="../lib/shim.min.js"></script>
+		<script src="../lib/modules.min.js"></script>
+		<script src="../lib/log.min.js"></script>
+		<script src="../lib/ajax.min.js"></script>
+		<script src="../lib/mustache.min.js"></script>
+		<script src="../src/bibtex.js"></script>
+		<script src="standalone.js?publications.bib|!Book|!Book Chapter|Journal|Conference|!Workshop|!Miscellaneous"></script>
+
+		<!-- for production use after compiling -->
+		<script src="sa.bibtex.js?publications.bib|Book|Book Chapter|Journal|Conference|Workshop|Miscellaneous"></script>
+		<!-- -->
 	</body>
 </html>

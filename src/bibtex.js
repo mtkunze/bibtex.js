@@ -46,9 +46,12 @@ if ("function" != typeof(require)) {
 		 * object, object, object, ..., string  --> records, pattern
 		 */
 		format: function(record, pattern) {
+			
+Log.info("Bibtex#format", record);
+			
 			var Mustache = require('mustache'), // require again for faster scope resolution
 				records = [],
-			    args = Array.prototype.map.call(arguments, function(i){return i;}),
+			    args = Array.apply(Array, arguments), // make arguments a proper array
 			
 			   	ptn = "<p>{{author}}. "+
 			          "<em> {{title}}. </em> "+
@@ -65,7 +68,7 @@ if ("function" != typeof(require)) {
 				}
 			}
 			
-			// map different format of arcs to array of records
+			// map different format of args to array of records
 			if (args.length > 1) { // object, object, ...
 				records = args;
 			}
@@ -86,6 +89,14 @@ if ("function" != typeof(require)) {
 				args = [];
 			}
 			
+			// remove empty records
+			records = records.filter(function(i){return !isNot(i)});
+			
+			// do not try to render empty or undefined list of records
+			if (0 == records.length) {
+				return "";
+			}
+			
 			return records.map(function(r) {
 				for (var k in r) {
 					if ("editor" == k || "author" == k) {
@@ -104,12 +115,16 @@ if ("function" != typeof(require)) {
 		}
 	});
 	
+	function isNot(o) {
+		return null === o || "undefined" == typeof(o);
+	}
+	
 	function isString(o) {
-		return "function" == typeof(o.substring);
+		return !isNot(o) && "function" == typeof(o.substring);
 	}
 	
 	function isArray(o) {
-		return "function" == typeof(o.slice);
+		return !isNot(o) && "function" == typeof(o.slice);
 	}
 
 	function cleanValue(string) {
