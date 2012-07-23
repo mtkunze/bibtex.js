@@ -47,8 +47,6 @@ if ("function" != typeof(require)) {
 		 */
 		format: function(record, pattern) {
 			
-Log.info("Bibtex#format", record);
-			
 			var Mustache = require('mustache'), // require again for faster scope resolution
 				records = [],
 			    args = Array.apply(Array, arguments), // make arguments a proper array

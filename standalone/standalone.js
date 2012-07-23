@@ -21,15 +21,8 @@ var Ajax = require('ajax'),
 	
 	// toggle display function as required by the pattern	
 	toggle = function toggle(id) {
-		var d = document.getElementById(id) && document.getElementById(id).style.display;
-		if (d) {
-			if (d == "none" || d == "") {
-				d = "block"
-			}
-			else {
-				d = "none";
-			}
-		}
+		var s = document.getElementById(id) && document.getElementById(id).style;
+		s.display = (s.display == "none" || s.display == "") ? "block":"none";
 	},
 	
 	// categories and keywords to be found in type attribute of bibtex record
@@ -51,6 +44,7 @@ var Ajax = require('ajax'),
 // <script src="sa.bibtex.js?path/to/pub.bib|Book|Journal|Conference|Workshop|Miscellaneous"></script>
 Array.prototype.forEach.call(document.getElementsByTagName("script"), function(script){
 	var m = script.src.match(/sa\.bibtex\.js\?([^\|]+)(.*)/);
+//	var m = script.src.match(/standalone\.js\?([^\|]+)(.*)/);
 	if (m) {
 		bibsrc = m[1];
 		selected_categories = m[2].split("|").filter(function(c){return c.trim().length > 0})
