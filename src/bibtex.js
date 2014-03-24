@@ -1,3 +1,13 @@
+/******************************************************************************
+ * Bibtex parser
+ *
+ * this is work inprogress and only accepts the most common bibtex files
+ *
+ * for completeness, compare with:
+ * http://maverick.inria.fr/~Xavier.Decoret/resources/xdkbibtex/bibtex_summary.html
+ *
+ */
+
 // start code
 if ("function" != typeof(require)) {
 	throw "modules library required";
@@ -6,6 +16,9 @@ if ("function" != typeof(require)) {
 (function(context) {
 	
 	//var Mustache = require('mustache');
+
+	
+	var Log = require('log');
 	
 	var Bibtex = function(raw) {
 		this.raw = raw;
@@ -20,13 +33,40 @@ if ("function" != typeof(require)) {
 		records: [],
 				
 		// public methods
-		parse: function() {
+		parse: function(log) {
+			if (!!log && "function" == typeof(log.warn)) {
+				Log = log;
+			} 
 			this.records = parseCollection(this.raw);
+		},
+		
+		// TODO: escaping of delimiters and quotes, preserving of special characters and line feeds
+		// See http://tools.ietf.org/html/rfc4180
+		toCSV: function() {
+			var keys = isArray(arguments[0]) ? arguments[0] : Array.apply(Array, arguments);
+			return this.records.map(function(r) {
+				return keys.map(function(k) {
+					if ("function" == typeof(k)) {
+						return k(r);
+					} // else
+					return Bibtex.cleanValue(r[k]);
+				}).map(function(f){
+					// TODO escape delimiters and special charactes
+					return "\""+f.replace(/\"/g, "\"\"")+"\"";
+				}).join(Bibtex.CSV_FIELD_DELIMITER);
+			}).join(Bibtex.CSV_RECORD_DELIMITER);
 		}
 	});
 	
 	// static properties
 	Object.extend(Bibtex, {
+		
+		/*
+		 * configuration settings 
+		 */
+		CSV_FIELD_DELIMITER : ";",
+		CSV_RECORD_DELIMITER : "\n",
+		
 		/**
 		 * Prints bibtex records, uses mustache.js for rendering
 		 * @see http://mustache.github.com/#demo
@@ -98,18 +138,48 @@ if ("function" != typeof(require)) {
 			return records.map(function(r) {
 				for (var k in r) {
 					if ("editor" == k || "author" == k) {
-						r[k] = formatAuthor(r[k])
+						r[k] = Bibtex.formatAuthor(r[k])
 					}
 					else if ("_raw" == k) {
 						// ignore
 					}
 					else {
-						r[k] = cleanValue(r[k]);
+						r[k] = Bibtex.cleanValue(r[k]);
 					}
 				}
 				
 				return Mustache.render(ptn, r);
 			}).join("");
+		},
+		
+		cleanValue: function (string) {
+			if ("undefined" == typeof(string) || "function" != typeof(string.toString)) {
+				return "";
+			}
+			
+			// TODO replace umlauts
+			return string.toString()
+	//			.trim()
+				.replace(/^[\{\s]*/,"").replace(/[\s\}]*$/,"")
+				.replace(/\{?\\"\{?a\}*/g, "ä").replace(/\{?\\"\{?o\}*/g, "ö").replace(/\{?\\"\{?u\}*/g, "ü")
+				.replace(/\{?\\"\{?A\}*/g, "Ä").replace(/\{?\\"\{?O\}*/g, "Ö").replace(/\{?\\"\{?U\}*/g, "Ü")
+				.replace(/\{?\\'\{?\\i\}*/g, "í").replace(/\{\\~n\}*/g, "ñ")
+				.replace(/[~ ]-- /g, " &ndash; ")
+				.replace(/[\n\r]{2,}/g,"<br/>");
+		},
+
+		formatAuthor: function(author) {
+			// TODO: make sure authors are in correct order: first last vs. last, first
+			
+			if ("undefined" == typeof(author) || "function" != typeof(author.toString)) {
+				return "";
+			}
+			
+
+			author = author.toString().split(" and ");
+			return author.map(function(a){
+				return Bibtex.cleanValue(a);
+			}).join(", ");
 		}
 	});
 	
@@ -122,27 +192,7 @@ if ("function" != typeof(require)) {
 	}
 	
 	function isArray(o) {
-		return !isNot(o) && "function" == typeof(o.slice);
-	}
-
-	function cleanValue(string) {
-		// TODO replace umlauts
-		return string
-//			.trim()
-			.replace(/^[\{\s]*/,"").replace(/[\s\}]*$/,"")
-			.replace(/\{?\\"\{?a\}*}/g, "ä").replace(/\{?\\"\{?o\}*}/g, "ö").replace(/\{?\\"\{?u\}*}/g, "ü")
-			.replace(/\{?\\"\{?A\}*}/g, "Ä").replace(/\{?\\"\{?O\}*}/g, "Ö").replace(/\{?\\"\{?U\}*}/g, "Ü")
-			.replace(/[~ ]-- /g, " &ndash; ")
-			.replace(/[\n\r]{2,}/g,"<br/>");
-	}
-	
-	function formatAuthor(authors) {
-		// TODO: make sure authors are in correc torder: first last vs. last, first
-		
-		authors = authors.split(" and ");
-		return authors.map(function(a){
-			return cleanValue(a);
-		}).join(", ");
+		return !isNot(o) && "function" == typeof(o.forEach);
 	}
 
 	function parseCollection(raw) {
@@ -151,45 +201,77 @@ if ("function" != typeof(require)) {
 		    last = '',
 			open = 0,
 			record = false,
-			buffer = '';
-		
-		for (var i=0; i < raw.length; i++) {
-			current = raw.charAt(i);
+			buffer = '',
+			lastStart = Infinity;
 			
-			if (0 == open && '@' == current) { // new record
-				record = true;
-			}
-			else if (record && '{' == current && '\\' != last) { // open a bracket
-				open++;
-			}
-			else if (record && '}' == current && '\\' != last) { // close a bracket
-				open--;
-				
-				if (0 > open) {
-					// TODO add line number support
-					throw "More brackets were closed than opened";
+		var i = 0;
+		
+		while(lastStart > -1) {
+			try {
+			
+				for (; i < raw.length; i++) {
+					current = raw.charAt(i);
+			
+					if ('@' == current) { 
+						if (0 == open){ 
+							// new record, everything is fine
+							record = true;
+							lastStart = Infinity;
+						}
+						else { 
+							// we found an @, where we didn't expect it
+							// it could be part of a field's value though
+							lastStart = Math.min(i, lastStart);
+						}
+					}
+					else if (record && '{' == current && '\\' != last) { // open a bracket
+						open++;
+					}
+					else if (record && '}' == current && '\\' != last) { // close a bracket
+						open--;
+			
+						if (0 > open) {
+							// this can never happen, can it?
+							throw "More brackets were closed than opened";
+						}
+			
+						if (0 == open) { // close a record
+							record = false;
+							records.push(parseRecord(buffer+current));
+					
+							buffer = '';
+							lastStart = Infinity;
+						}
+					}
+		
+					if (record) {
+						buffer += current;
+					}
+					last = current;
+				}
+			
+				// if there are leftovers
+				if (record) {
+					throw("unterminated record");
+				}
+		
+				if (open) {
+					throw("unblanaced paranthesis");
 				}
 				
-				if (0 == open) { // close a record
-					record = false;
-					records.push(parseRecord(buffer+current));
-					buffer = '';
-				}
-			}
+				// everything is fine
+				lastStart = -1;
+				
+			} catch (e) {
+				// try to recover from last found @
+				Log.warn(e + buffer);
 			
-			if (record) {
-				buffer += current;
+				record = false;
+				open = 0;
+				buffer = '';
+				last = '';
+				i = lastStart;
 			}
-			last = current;
-			
-		}
-		
-		if (record) {
-			throw "unterminated record: \n" + buffer;
-		}
-		
-		if (open) {
-			throw "unblanaced paranthesis: \n" + buffer;
 		}
 		
 		return records;
@@ -228,10 +310,14 @@ if ("function" != typeof(require)) {
 				value = true;
 				continue;
 			}
-			else if (value && 0 == open && "," == current && "\\" != last) { // end of a value
+			else if (value && 0 == open && "," == current && "\\" != last) { 
+				// end of a value
+				
 				// store entry
-				record[key] = buffer.trim();
-				buffer = '';
+				if (key.length > 0) {
+					record[key] = buffer.trim();
+					buffer = '';
+				}
 				
 				// clean key and close value
 				key = false;
@@ -244,7 +330,9 @@ if ("function" != typeof(require)) {
 			else if ((key || value) && "}" == current && "\\" != last) {
 				open--;
 				if (0 > open) {
-					if (i == raw.length -1) {
+					if (i == raw.length -1 && // we're at the end of the record
+						isString(key) && key.length >  0) // the key must not be empty
+						{
 						record[key] = (buffer+current).trim();
 					}
 					break;
@@ -259,8 +347,6 @@ if ("function" != typeof(require)) {
 		
 		return record;
 	}
-	
-	function formatAuthors(authors){}
 	
 	context['bibtex'] = Bibtex;
 })(require.modules);
