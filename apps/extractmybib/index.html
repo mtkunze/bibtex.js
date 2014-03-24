@@ -1,0 +1,326 @@
+<html>
+<head>
+	<title>Extract My Bib </title>
+<style>
+
+html,body {
+	height: 100%;
+	width:100%;
+	padding:0;
+	margin:0;
+	position: relative;
+}
+body, textarea {	
+	font-family: "Courier New", Courier, monospace;
+	font-size: 12px;
+}
+
+.tile {
+	position: relative;
+	height: 48.5%;
+	width: 48.5%;
+	margin: 1% .5% .5% 1%;
+	float: left;
+	
+	background: #eee;
+	border-width: 0;
+}
+
+.tile .hint {
+	position: absolute;
+	bottom:0;
+	right:0;
+	opacity: .5;
+	font-size: 3em;
+	color: #fff;
+	background-color: #444;
+	transition: opacity .3s ease;
+}
+
+.tile:hover .hint {
+	opacity: .1;
+}
+
+.tile textarea,
+.tile #log {
+	position: absolute;
+	top:0;
+	left:0;
+	width: 100%;
+	height: 100%;
+	border-width: 0;
+	background-color: transparent;
+	overflow: auto;
+}
+
+.tile.log:hover:after {
+	position: absolute;
+	top:0;
+	right:0;
+	background-color: lightgreen;
+	color: #444;
+	content: "Click to empty";
+	font-size: 1em;
+	padding: .5em;
+	opacity: 1;
+}
+
+.tile textarea.highlight {
+	background-color: lightgreen;
+}
+
+#log .debug,
+#log .info,
+#log .warn,
+#log .error {
+	display: block;
+	padding: .5em;
+	margin:0;
+	border-bottom: .5px solid transparent;
+}
+
+#log .info{
+	background-color: #A8B9FF;
+	color: #5C72CC;
+}
+#log .warn{
+	background-color: #FFC891;
+	color: #CE6000;
+}
+#log .error{
+	background-color: #FF9EA6;
+	color:#993C46;
+}
+
+</style>
+
+<script src="lib/shim.js"></script>
+<script src="lib/modules.js"></script>
+<script src="lib/log.js"></script>
+<script src="lib/filedrop.js"></script>
+<script src="lib/bibtex.js"></script>
+
+</head>
+<body>
+	<div class="tile">
+		<textarea id="bibtex_in">bibtex in</textarea>
+		<span class="hint">Bibtex Input</span>
+	</div>
+	
+	<div class="tile">
+		<textarea id="latex_in">latex in</textarea>
+		<span class="hint">LaTeX Input</span>
+	</div>
+	
+	<div class="tile">
+		<textarea id="bibtex_out">bibtex out</textarea>
+		<span class="hint">Bibtex Output</span>
+	</div>
+	<div class="tile log">
+		<div id="log"></div>
+		<span class="hint">Log</span>
+	</div>
+</body>
+
+<script>
+
+(function(){
+
+	var Filedrop = require('filedrop'),
+		Bibtex = require('bibtex');
+		
+	var Log = (function(out){
+		
+		out = (out.nodetype > 0 ? out : document.getElementById(out));
+		out.addEventListener("click", function(){
+			out.innerHTML = "";
+		});
+		
+		function write(args, level) {
+			var msg = document.createElement("pre");
+				msg.className = level;
+				msg.innerHTML = args[0];
+				
+			// adf
+			if (args.length > 1) {
+				
+				
+			}
+				
+			out.appendChild(msg);
+		}
+		
+		
+		return {
+			debug: function(){
+				write(arguments, "debug");
+			},
+			info: function(){
+				write(arguments, "info");
+			},
+			warn: function(){
+				write(arguments, "warn");
+			},
+			error: function(){
+				write(arguments, "error");
+			}
+		}
+	})("log");
+	
+	var IO = function(element) {
+
+		var el = (element.nodetype > 0 ? element : document.getElementById(element));
+	
+
+		el.read = function() {
+			try {
+				return JSON.parse(this.value);
+			} catch(e){}
+			return this.value;
+		}
+	
+		el.write = function(data) {
+			this.value = this.value + ("string" != typeof(data) ? JSON.stringify(data) : data);
+		}
+	
+		el.clear = function() {
+			this.value = '';
+		}
+
+		return el;
+	};
+
+	var bib_in  = IO("bibtex_in"),
+	    tex_in  = IO("latex_in"),
+		bib_out = IO("bibtex_out");
+		
+		
+	bib_in.clear();
+	bib_in.write("Insert your Bibtex file by pasting its content, or drag and drop the file into this area.")
+	tex_in.clear(); 
+	tex_in.write("Insert your LaTeX file by pasting its content, or drag and drop the file into this area.")
+	bib_out.clear();
+	bib_out.write("Once you inserted both Bibtex and LaTeX input, this area will contain all Bibtex records that are referenced in your LaTeX.\n\n"+
+				  "Everytime, you update your Bibtex or LaTeX input, this output will be updated as well.")
+	
+	/*
+	 * reads text from loaded files, calls callback, when all files have been read
+	 */
+	var loadText = function(el, event, callback) {
+		var files = event.dataTransfer.files,
+			numFiles = files.length;
+	
+		var promise = function() {
+			if(! --numFiles) {
+				callback();
+			}
+		}
+	
+		if (!!files && files.length > 0) {
+			el.clear();
+			for (var i=0; i < files.length; i++) {
+				var reader = new FileReader();
+				reader.onload = function(e){
+					el.write(e.target.result);
+					promise();
+				};
+				reader.readAsText(files[i]);
+			}
+		}
+	}
+
+	var records = null;
+	var references = null;
+
+	function readBib() {
+		var b = new Bibtex(bib_in.read());
+			b.parse(Log)
+		records = b.getRecords();
+	
+		Log.info("Found " + Object.keys(records).length + " records");//, Object.keys(records))
+	
+		writeBib();
+	}
+
+	function readTex() {
+		var rc = /\\cite[^\{]*\{[^\}]+\}/g;
+		    rr = /\\cite[^\{]*\{([^\}]+)+\}/;
+		
+		var t = tex_in.read();
+		var refs = {};
+	
+		var mc = t.match(rc) || [];
+	
+		Array.prototype.forEach.call(mc, function(cite){
+			Array.prototype.forEach.call((cite.match(rr) || [null,""])[1].split(","), function(ref){
+				refs[ref] = (refs[ref] || 0) + 1;
+			})		
+		});
+	
+		references = Object.keys(refs);
+	
+		Log.info("Found " + references.length + " refs") //, references);
+
+		writeBib();
+	}
+	
+	function writeBib(){
+		if (records && references) {
+			var c = 0;
+			bib_out.clear();
+			references.forEach(function (ref){
+				if (records[ref]) {
+					bib_out.write(records[ref]._raw+"\n\n");
+					c++;
+				}
+				else {
+					Log.error("Didn't find entry in bibtex input: " + ref)
+				}
+			});
+		
+			Log.info("Created Bibtex output of " + c + " records");
+		}
+	}
+
+	new Filedrop(bib_in, {
+		onEnter: function(event){
+			bib_in.classList.add("highlight");
+		},
+		onExit: function(event){
+			bib_in.classList.remove("highlight");
+		},
+		onDrop: function(event){
+			bib_in.classList.remove("highlight");
+			loadText(bib_in, event, readBib);
+		}
+	});
+	bib_in.addEventListener("change", readBib);
+
+	new Filedrop(tex_in, {
+		onEnter: function(event){
+			tex_in.classList.add("highlight");
+		},
+		onExit: function(event){
+			tex_in.classList.remove("highlight");
+		},
+		onDrop: function(event){
+			tex_in.classList.remove("highlight");
+			loadText(tex_in, event,readTex);
+		}
+	});
+	tex_in.addEventListener("change", readTex);
+
+})();
+
+Array.prototype.dedup = function(){
+	var result = [];
+	this.forEach(function(e,i){
+		if (-1 == result.indexOf(e)) {
+			result.push(e);
+		}
+	});
+	return result;
+}
+
+</script>
+</html>
