@@ -196,12 +196,15 @@ body, textarea {
 		
 		
 	bib_in.clear();
-	bib_in.write("Insert your Bibtex file by pasting its content, or drag and drop the file into this area.")
+	bib_in.write("Insert your Bibtex file by pasting its content, or drag and drop the file into this area.\n\n"+
+				 "You can drag and drop several files at once to concatenate them here.")
 	tex_in.clear(); 
-	tex_in.write("Insert your LaTeX file by pasting its content, or drag and drop the file into this area.")
+	tex_in.write("Insert your LaTeX file by pasting its content, or drag and drop the file into this area.\n\n"+
+				 "You can drag and drop several files at once to concatenate them here.")
 	bib_out.clear();
 	bib_out.write("Once you inserted both Bibtex and LaTeX input, this area will contain all Bibtex records that are referenced in your LaTeX.\n\n"+
-				  "Everytime, you update your Bibtex or LaTeX input, this output will be updated as well.")
+				  "Everytime, you update your Bibtex or LaTeX input, this output will be updated as well.\n\n"+
+				  "Doubleclick will open the ooutput in a new window for \"Save as\"")
 	
 	/*
 	 * reads text from loaded files, calls callback, when all files have been read
@@ -277,8 +280,11 @@ body, textarea {
 					Log.error("Didn't find entry in bibtex input: " + ref)
 				}
 			});
+			
+			var l = "info"
+			if (0 >= c) {l = "warn"}
 		
-			Log.info("Created Bibtex output of " + c + " records");
+			Log[l]("Created Bibtex output of " + c + " records");
 		}
 	}
 
@@ -309,6 +315,10 @@ body, textarea {
 		}
 	});
 	tex_in.addEventListener("change", readTex);
+	
+	bib_out.addEventListener("dblclick", function(){
+		window.open("data:text/html;charset=UTF-8," + bib_out.read());
+	})
 
 })();
 
