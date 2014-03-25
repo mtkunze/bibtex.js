@@ -30,7 +30,8 @@ body, textarea {
 	position: absolute;
 	bottom:0;
 	right:0;
-	opacity: .5;
+	opacity: .6;
+	padding: .1em;
 	font-size: 3em;
 	color: #fff;
 	background-color: #444;
@@ -53,16 +54,27 @@ body, textarea {
 	overflow: auto;
 }
 
+.tile.bibtex_in:hover:after,
+.tile.latex_in:hover:after,
+.tile.bibtex_out:hover:after,
 .tile.log:hover:after {
 	position: absolute;
 	top:0;
-	right:0;
+	left:0;
 	background-color: lightgreen;
+	opacity: 0.9;
 	color: #444;
-	content: "Click to empty";
+	content: "Double click to empty";
 	font-size: 1em;
 	padding: .5em;
-	opacity: 1;
+}
+
+.tile.bibtex_in:hover:after,
+.tile.latex_in:hover:after {
+	content: "Drop files or paste content to input.";
+}
+.tile.bibtex_out:hover:after {
+	content: "Double click to open output.";
 }
 
 .tile textarea.highlight {
@@ -102,17 +114,17 @@ body, textarea {
 
 </head>
 <body>
-	<div class="tile">
+	<div class="tile bibtex_in">
 		<textarea id="bibtex_in">bibtex in</textarea>
 		<span class="hint">Bibtex Input</span>
 	</div>
 	
-	<div class="tile">
+	<div class="tile latex_in">
 		<textarea id="latex_in">latex in</textarea>
 		<span class="hint">LaTeX Input</span>
 	</div>
 	
-	<div class="tile">
+	<div class="tile bibtex_out">
 		<textarea id="bibtex_out">bibtex out</textarea>
 		<span class="hint">Bibtex Output</span>
 	</div>
@@ -132,19 +144,26 @@ body, textarea {
 	var Log = (function(out){
 		
 		out = (out.nodetype > 0 ? out : document.getElementById(out));
-		out.addEventListener("click", function(){
+		out.addEventListener("dblclick", function(){
 			out.innerHTML = "";
 		});
 		
 		function write(args, level) {
 			var msg = document.createElement("pre");
 				msg.className = level;
-				msg.innerHTML = args[0];
+				msg.innerHTML = args[0]+" ";
 				
 			// adf
 			if (args.length > 1) {
-				
-				
+				var data = Array.prototype.slice.call(args, 1);
+				if (1 == data.length) {
+					data = data[0];
+				}
+				var more = document.createElement("a");
+				more.href = "data:text/html;charset=UTF-8," + JSON.stringify(data);
+				more.appendChild(document.createTextNode("more"));
+				more.target = "_blank";
+				msg.appendChild(more);
 			}
 				
 			out.appendChild(msg);
@@ -204,7 +223,7 @@ body, textarea {
 	bib_out.clear();
 	bib_out.write("Once you inserted both Bibtex and LaTeX input, this area will contain all Bibtex records that are referenced in your LaTeX.\n\n"+
 				  "Everytime, you update your Bibtex or LaTeX input, this output will be updated as well.\n\n"+
-				  "Doubleclick will open the ooutput in a new window for \"Save as\"")
+				  "Doubleclick will open the output in a new window for \"Save as\"")
 	
 	/*
 	 * reads text from loaded files, calls callback, when all files have been read
@@ -240,7 +259,9 @@ body, textarea {
 			b.parse(Log)
 		records = b.getRecords();
 	
-		Log.info("Found " + Object.keys(records).length + " records");//, Object.keys(records))
+		var rec_keys = Object.keys(records).sort();
+	
+		Log.info("Found " + rec_keys.length + " records in your Bibtex input.", rec_keys);
 	
 		writeBib();
 	}
@@ -260,14 +281,14 @@ body, textarea {
 			})		
 		});
 	
-		references = Object.keys(refs);
+		references = Object.keys(refs).sort();
 	
-		Log.info("Found " + references.length + " refs") //, references);
+		Log.info("Found " + references.length + " distinct references in your LaTeX input.", references);
 
 		writeBib();
 	}
 	
-	function writeBib(){
+	function writeBib() {
 		if (records && references) {
 			var c = 0;
 			bib_out.clear();
@@ -277,14 +298,14 @@ body, textarea {
 					c++;
 				}
 				else {
-					Log.error("Didn't find entry in bibtex input: " + ref)
+					Log.error("Didn't find record in Bibtex input for: " + ref)
 				}
 			});
 			
 			var l = "info"
 			if (0 >= c) {l = "warn"}
 		
-			Log[l]("Created Bibtex output of " + c + " records");
+			Log[l]("Created Bibtex output of " + c + " records.");
 		}
 	}
 
